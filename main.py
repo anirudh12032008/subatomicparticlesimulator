@@ -167,8 +167,8 @@ def look():
     name, data = pick()
     
     print(f"\n Examining {name} under our super microscope...")
-    print(f"Mass: {data['mass']} MeV (that's how heavy it is)")
-    print(f" Charge: {data['charge']} (positive, negative, or neutral)")
+    print(f"Mass: {data['m']} MeV (that's how heavy it is)")
+    print(f" Charge: {data['c']} (positive, negative, or neutral)")
     
     facts = {
         "electron": "This little guy makes electricity work! It's so small it might be point-like!",
