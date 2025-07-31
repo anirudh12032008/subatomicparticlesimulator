@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Collision Simulator - Terminal</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #00ff00;
+            padding: 10px 20px;
+            border-bottom: 2px solid #00ff00;
+            text-align: center;
+            font-size: 14px;
+            box-shadow: 0 2px 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            color: #00ffff;
+            text-shadow: 0 0 5px #00ffff;
+        }
+
+        .header p {
+            margin: 5px 0 0 0;
+            font-size: 12px;
+            color: #00ff00;
+        }
+
+        #terminal-container {
+            width: 100vw;
+            height: calc(100vh - 80px);
+            background: #000;
+        }
+
+        .connection-status {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .status-connected {
+            background: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+            border: 1px solid #00ff00;
+        }
+
+        .status-disconnected {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff0000;
+            border: 1px solid #ff0000;
+        }
+
+        .status-connecting {
+            background: rgba(255, 255, 0, 0.2);
+            color: #ffff00;
+            border: 1px solid #ffff00;
+        }
+
+        .xterm {
+            height: 100% !important;
+        }
+
+        .xterm .xterm-viewport {
+            overflow-y: scroll;
+        }
+
+        .xterm .xterm-viewport::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .xterm .xterm-viewport::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        .xterm .xterm-viewport::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 5px;
+        }
+
+        .xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1> PARTICLE COLLISION SIMULATOR - TERMINAL INTERFACE</h1>
+        <p>CERN Large Hadron Collider Simulation | Professional Physics Terminal</p>
+        <div id="connection-status" class="connection-status status-connecting">Connecting...</div>
+    </div>
+    <div id="terminal-container"></div>
+    <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const term = new Terminal({
+            theme: {
+                background: '#000000',
+                foreground: '#00ff00',
+                cursor: '#00ff00',
+                cursorAccent: '#000000',
+                selection: 'rgba(0, 255, 0, 0.3)',
+                black: '#000000',
+                red: '#ff0000',
+                green: '#00ff00',
+                yellow: '#ffff00',
+                blue: '#0000ff',
+                magenta: '#ff00ff',
+                cyan: '#00ffff',
+                white: '#ffffff',
+                brightBlack: '#555555',
+                brightRed: '#ff5555',
+                brightGreen: '#55ff55',
+                brightYellow: '#ffff55',
+                brightBlue: '#5555ff',
+                brightMagenta: '#ff55ff',
+                brightCyan: '#55ffff',
+                brightWhite: '#ffffff'
+            },
+            fontFamily: '"Courier New", monospace',
+            fontSize: 14,
+            fontWeight: 'normal',
+            fontWeightBold: 'bold',
+            lineHeight: 1.2,
+            letterSpacing: 0,
+            cursorBlink: true,
+            cursorStyle: 'block',
+            scrollback: 10000,
+            tabStopWidth: 4,
+            convertEol: true
+        });
+        term.open(document.getElementById('terminal-container'));
+        const socket = io();
+        const statusElement = document.getElementById('connection-status');
+        socket.on('connect', function () {
+            console.log('Connected to server');
+            statusElement.textContent = 'Connected';
+            statusElement.className = 'connection-status status-connected';
+        });
+        socket.on('disconnect', function () {
+            console.log('Disconnected from server');
+            statusElement.textContent = 'Disconnected';
+            statusElement.className = 'connection-status status-disconnected';
+            term.write('\r\n\x1b[1;31m[CONNECTION LOST - Attempting to reconnect...]\x1b[0m\r\n');
+        });
+        socket.on('connect_error', function (error) {
+            console.log('Connection error:', error);
+            statusElement.textContent = 'Connection Error';
+            statusElement.className = 'connection-status status-disconnected';
+        });
+        socket.on('terminal_output', function (data) {
+            term.write(data);
+        });
+        term.onData(function (data) {
+            socket.emit('terminal_input', data);
+        });
+        term.onSelectionChange(function () {
+            if (term.hasSelection()) {
+                document.execCommand('copy');
+            }
+        });
+        term.focus();
+        window.addEventListener('resize', function () {
+            term.fit();
+        });
+        setTimeout(function () {
+            term.fit();
+        }, 100);
+        document.addEventListener('keydown', function (event) {
+            if (event.ctrlKey && event.key === 'c') {
+                socket.emit('terminal_input', '\x03');
+            }
+            if (event.ctrlKey && event.key === 'l') {
+                event.preventDefault();
+                term.clear();
+            }
+        });
+        console.log('Particle Collision Simulator Terminal');
+        console.log('Built with xterm.js and Flask-SocketIO');
+        console.log('Physics engine: Custom particle collision simulation');
+    </script>
+</body>
+
+</html>
